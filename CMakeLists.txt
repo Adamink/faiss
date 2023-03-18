@@ -34,6 +34,10 @@ if(FAISS_ENABLE_GPU)
   add_subdirectory(faiss/gpu)
 endif()
 
+if(FAISS_ENABLE_GPU)
+  include_directories("/usr/local/cuda/include")
+endif()
+
 if(FAISS_ENABLE_PYTHON)
   add_subdirectory(faiss/python)
 endif()
