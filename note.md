@@ -6,7 +6,12 @@ endif()
 ```sh
 cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda"
 ```
-
+In c_cpp_properties.json
+```json
+  ...
+  "compilerPath": "/usr/local/cuda/bin/nvcc",
+  ...
+```
 nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
@@ -86,7 +91,7 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
             runPQScanMultiPassPrecomputed
 
 Questions: 
-1. what is nprobe? number of ivf cells to search?
-2. Linting .cu and .cuh files
 
+trace kernel function call, see what happens if parameter changes(k, ivf nprobe)
 
+faiss gpu paper
