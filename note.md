@@ -12,6 +12,11 @@ In c_cpp_properties.json
   "compilerPath": "/usr/local/cuda/bin/nvcc",
   ...
 ```
+
+```
+sudo nsys profile --stats=true --trace=cuda ./IVFPQ-GPU
+```
+
 nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
