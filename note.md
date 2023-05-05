@@ -17,6 +17,7 @@ In c_cpp_properties.json
 sudo nsys profile --stats=true --trace=cuda ./IVFPQ-GPU
 ```
 
+```txt
 nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
@@ -41,7 +42,7 @@ ProductQuantizer::train
     clus.train(n, xslice, assign_index ? *assign_index : index);
         Clustering::train_encoded(n, xslice, nullptr, index, weights)
             subsample_training_set
-
+```
 In main func:
 ```cpp
     faiss::gpu::GpuIndexFlatL2 quantizer(&res, d); // the other index
@@ -74,8 +75,10 @@ class GpuIndexIVFPQ:
   // Called from GpuIndex for search
   void searchImpl(idx_t n,const float* x,int k,float* distances,idx_t* labels,const SearchParameters* params) const override;
 ```
-GpuIndexFlat
-  data_->query
+
+```cpp
+GpuIndexFlat::searchImpl_ // calls data_->query
+  FlatIndex::query
     bfKnnOnDevice
       runL2Distance
         runDistance
@@ -88,15 +91,13 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
   GpuIndex::searchFromCpuPaged_ or searchNonPaged_ // batch-processing queries by using pinned memories, should check in detail in the future
     GpuIndexIVF::searchImpl_ // set nprobe, calls baseIndex_::search(inited in GpuIndexIVFPQ)
       IVFPQ::search
-        searchCoarseQuantizer_ // Performs search in a CPU or GPU coarse quantizer for IVF cells
+        IVFBase::searchCoarseQuantizer_ // Performs search in a CPU or GPU coarse quantizer for IVF cells, calls coarseQuantizer::search
+          GpuIndex::search
+            GpuIndexFlat::searchImpl_ // called from GpuIndex::search, calls data_->query
+              FlatIndex::query // ... same as above
         searchImpl_
           runPQPrecomputedCodes_ // Performs matrix multiplication
             runTransposeAny
             runBatchMatrixMult
             runPQScanMultiPassPrecomputed
-
-Questions: 
-
-trace kernel function call, see what happens if parameter changes(k, ivf nprobe)
-
-faiss gpu paper
+```
