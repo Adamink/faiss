@@ -21,6 +21,7 @@ sudo nsys profile --stats=true --trace=cuda ./IVFPQ-GPU
 nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
+k: k nearest neighbors
 M, m, subQuantizers = 8 : number of subquantizers
 nbits: number of bits per subvector index (per quantization index)
 dsub = d / M: dimensionality of each subvector
@@ -85,7 +86,7 @@ GpuIndexFlat::searchImpl_ // calls data_->query
           runL2Norm
           runMatrixMult
           runL2SelectMin
-            l2selectMin1
+            l2selectMin1(kernel)
 
 GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with device-resident pointers
   GpuIndex::searchFromCpuPaged_ or searchNonPaged_ // batch-processing queries by using pinned memories, should check in detail in the future
@@ -95,9 +96,24 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
           GpuIndex::search
             GpuIndexFlat::searchImpl_ // called from GpuIndex::search, calls data_->query
               FlatIndex::query // ... same as above
-        searchImpl_
-          runPQPrecomputedCodes_ // Performs matrix multiplication
+        IVFPQ::searchImpl_
+          IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication
             runTransposeAny
+              transposeOuter(kernel)
+              transposeAny(kernel)
             runBatchMatrixMult
-            runPQScanMultiPassPrecomputed
+              rawBatchGemm
+                cublasGemmStridedBatchedEx(kernel) // cublas kernel
+            IVFPQ::runPQScanMultiPassPrecomputed // same as below
+          IVFPQ::runPQNoPrecomputedCodes_
+            runPQScanMultiPassNoPrecomputed
+              runMultiPassTile
+                runCalcListOffsets // Calculate offset lengths, so we know where to write out intermediate results
+                runPQCodeDistances // Calculate residual code distances, since this is without precomputed codes
+                  pqCodeDistances(kernel)
+                pqScanInterleaved(kernel)
+                pqScanNoPrecomputedMultiPass(kernel)
+                runPass1SelectLists(kernel) // k-select the output in chunks, to increase parallelism
+                runPass2SelectLists(kernel) // select final results
+
 ```
