@@ -18,9 +18,9 @@
 using idx_t = faiss::idx_t;
 
 int main() {
-    int d = 64;      // dimension
+    int d = 1024;      // dimension
     int nb = 100000; // database size
-    int nq = 10000;  // nb of queries
+    int nq = 10000;  // number of queries
 
     std::mt19937 rng;
     std::uniform_real_distribution<> distrib;
@@ -40,9 +40,9 @@ int main() {
         xq[d * i] += i / 1000.;
     }
 
-    int nlist = 100;
-    int k = 4;
-    int m = 8;                       // bytes per vector
+    int nlist = 100; // number of lists for IVF indexing
+    int k = 100; // k nearest neighbors to be found
+    int m = 8; // number of subquantizers
 
     faiss::gpu::StandardGpuResources res;
 
@@ -51,30 +51,6 @@ int main() {
 
     index.train(nb, xb);
     index.add(nb, xb);
-
-    { // sanity check
-        idx_t* I = new idx_t[k * 5];
-        float* D = new float[k * 5];
-
-        index.search(5, xb, k, D, I);
-
-        printf("I=\n");
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < k; j++)
-                printf("%5zd ", I[i * k + j]);
-            printf("\n");
-        }
-
-        printf("D=\n");
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < k; j++)
-                printf("%7g ", D[i * k + j]);
-            printf("\n");
-        }
-
-        delete[] I;
-        delete[] D;
-    }
 
     { // search xq
         idx_t* I = new idx_t[k * nq];
