@@ -5,6 +5,7 @@ endif()
 ```
 ```sh
 cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda"
+cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda" -DBLAS_LIBRARIES="/mnt/scratch/xiaowu/OpenBLASLib/lib" -DLAPACK_LIBRARIES="/home/xiaowu/.local/liblapack.a/"
 ```
 In c_cpp_properties.json
 ```json
