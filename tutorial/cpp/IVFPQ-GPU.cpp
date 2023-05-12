@@ -45,6 +45,8 @@ int main() {
 
     faiss::gpu::StandardGpuResources res;
 
+    GpuIndexIVFPQConfig config;
+    config.usePrecomputedTables = true;
     faiss::gpu::GpuIndexFlatL2 quantizer(&res, d); // the other index
     faiss::gpu::GpuIndexIVFPQ index(&res, &quantizer, d, nlist, m, 8);
 

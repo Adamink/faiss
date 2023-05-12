@@ -90,13 +90,23 @@ GpuIndexFlat::searchImpl_ // calls data_->query
             l2selectMin1(kernel)
 
 GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with device-resident pointers
-  GpuIndex::searchFromCpuPaged_ or searchNonPaged_ // batch-processing queries by using pinned memories, should check in detail in the future
+  // outDistances, outLabels = toDeviceTemporary...
+  // Currently, we don't handle the case where the output data won't fit on the GPU
+  GpuIndex::searchFromCpuPaged_ or searchNonPaged_ // batch-processing queries by using pinned memories
+  // batchSize = nextHighestPowerOf2((kNonPinnedPageSize / (sizeof(float) * this->d)))
     GpuIndexIVF::searchImpl_ // set nprobe, calls baseIndex_::search(inited in GpuIndexIVFPQ)
       IVFPQ::search
         IVFBase::searchCoarseQuantizer_ // Performs search in a CPU or GPU coarse quantizer for IVF cells, calls coarseQuantizer::search
           GpuIndex::search
             GpuIndexFlat::searchImpl_ // called from GpuIndex::search, calls data_->query
-              FlatIndex::query // ... same as above
+              FlatIndex::query
+                bfKnnOnDevice
+                  runL2Distance
+                    runDistance
+                      runL2Norm
+                      runMatrixMult
+                      runL2SelectMin
+                        l2selectMin1(kernel)
         IVFPQ::searchImpl_
           IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication
             runTransposeAny
@@ -119,18 +129,7 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
 
 ```
 
-```txt
-d: 1024
-nb: 100000
-nq: 10000
-nlist: 100
-m: 8
-k: 100
+sgemm: Single Precision General Matrix Multiplication
 
-d: 64
-nb: 100000
-nq: 10000
-nlist: 100
-m: 8
-k: 100
-```
+grace hopper: CPU-GPU NVLink bandwidth 900GB/s
+![](grace_hopper.png)
