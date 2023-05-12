@@ -21,6 +21,9 @@ int main() {
     int d = 1024;      // dimension
     int nb = 100000; // database size
     int nq = 10000;  // number of queries
+    int nlist = 100; // number of lists for IVF indexing
+    int k = 100; // k nearest neighbors to be found
+    int m = 8; // number of subquantizers
 
     std::mt19937 rng;
     std::uniform_real_distribution<> distrib;
@@ -40,10 +43,6 @@ int main() {
         xq[d * i] += i / 1000.;
     }
 
-    int nlist = 100; // number of lists for IVF indexing
-    int k = 100; // k nearest neighbors to be found
-    int m = 8; // number of subquantizers
-
     faiss::gpu::StandardGpuResources res;
 
     faiss::gpu::GpuIndexFlatL2 quantizer(&res, d); // the other index
@@ -58,13 +57,6 @@ int main() {
 
         index.nprobe = 10;
         index.search(nq, xq, k, D, I);
-
-        printf("I=\n");
-        for (int i = nq - 5; i < nq; i++) {
-            for (int j = 0; j < k; j++)
-                printf("%5zd ", I[i * k + j]);
-            printf("\n");
-        }
 
         delete[] I;
         delete[] D;

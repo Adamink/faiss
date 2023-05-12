@@ -118,3 +118,19 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                 runPass2SelectLists(kernel) // select final results
 
 ```
+
+```txt
+d: 1024
+nb: 100000
+nq: 10000
+nlist: 100
+m: 8
+k: 100
+
+d: 64
+nb: 100000
+nq: 10000
+nlist: 100
+m: 8
+k: 100
+```
