@@ -15,6 +15,7 @@ nq: 10000
 nlist: 100
 m: 8
 k: 100
+precomputed codes: false
 
 
 d: 64
@@ -23,4 +24,11 @@ nq: 10000
 nlist: 100
 m: 8
 k: 100
+precomputed codes: false
 ```
+
+batch_size?
+IVF select list: nlist, nprobe, d, IVF-Flat (nb = nlist)
+construct LUT isolate: k=1, nb = 1) 
+pq-scan 
+k-select

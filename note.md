@@ -6,6 +6,7 @@ endif()
 ```sh
 cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda"
 cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda" -DBLAS_LIBRARIES="/mnt/scratch/xiaowu/OpenBLASLib/lib" -DLAPACK_LIBRARIES="/home/xiaowu/.local/liblapack.a/"
+sudo apt-get install -y libboost-program-options-dev
 ```
 In c_cpp_properties.json
 ```json
@@ -108,14 +109,15 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                       runL2SelectMin
                         l2selectMin1(kernel)
         IVFPQ::searchImpl_
-          IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication
+          IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication to calculate - 2 * (x|y_R)
             runTransposeAny
               transposeOuter(kernel)
               transposeAny(kernel)
             runBatchMatrixMult
               rawBatchGemm
                 cublasGemmStridedBatchedEx(kernel) // cublas kernel
-            IVFPQ::runPQScanMultiPassPrecomputed // same as below
+            IVFPQ::runPQScanMultiPassPrecomputed 
+              runMultiPassTile // same as below
           IVFPQ::runPQNoPrecomputedCodes_
             runPQScanMultiPassNoPrecomputed
               runMultiPassTile
@@ -133,3 +135,20 @@ sgemm: Single Precision General Matrix Multiplication
 
 grace hopper: CPU-GPU NVLink bandwidth 900GB/s
 ![](grace_hopper.png)
+
+[Faiss之IVF详解](https://blog.csdn.net/lijinwen920523/article/details/113819843)
+[Faiss专栏](https://blog.csdn.net/rangfei/category_10080429.html)
+questions
+IVF的聚类和PQ的聚类是不是一个？应该不是，PQ是对subvectors聚类，IVF直接对原向量聚类
+PQ.train 
+
+What is precomputed codes? different from precompute table
+  计算码本 ProductQuantizer::compute_distance_table
+  config.usePrecomputedTables ?
+  Compute precomputed code term 3, - 2 * (x|y_R)
+
+
+add时候就计算了PQCodes
+
+Note
+索引的训练不是越多越好，在faiss的源代码中已经默认设置了一个quantizer容纳的最多向量是256个，所以训练集最大为nlist *256，大于该值则会从训练集中随机取子集。
