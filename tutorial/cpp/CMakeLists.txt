@@ -4,6 +4,11 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost 1.71.0 COMPONENTS program_options) 
+
 add_executable(1-Flat EXCLUDE_FROM_ALL 1-Flat.cpp)
 target_link_libraries(1-Flat PRIVATE faiss)
 
@@ -20,4 +25,4 @@ add_executable(5-Multiple-GPUs EXCLUDE_FROM_ALL 5-Multiple-GPUs.cpp)
 target_link_libraries(5-Multiple-GPUs PRIVATE faiss)
 
 add_executable(IVFPQ-GPU EXCLUDE_FROM_ALL IVFPQ-GPU.cpp)
-target_link_libraries(IVFPQ-GPU PRIVATE faiss)
+target_link_libraries(IVFPQ-GPU PRIVATE faiss Boost::program_options)
