@@ -44,10 +44,10 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     // Check if there are enough args or if --help is given
-    if (vm.count ("help") || !vm.count ("input") || !vm.count ("output")) {
-        std::cerr << desc << "\n";
-        return 1;
-    }
+    //if (vm.count ("help") || !vm.count ("input") || !vm.count ("output")) {
+    //    std::cerr << desc << "\n";
+    //    return 1;
+    //}
     std::cout << "d" << d << "_nb" << nb << "_nq" << nq << "_nlist" << nlist << "_k" << k << "_m" << m << std::endl;
 
     std::mt19937 rng;
