@@ -152,3 +152,6 @@ add时候就计算了PQCodes
 
 Note
 索引的训练不是越多越好，在faiss的源代码中已经默认设置了一个quantizer容纳的最多向量是256个，所以训练集最大为nlist *256，大于该值则会从训练集中随机取子集。
+
+How to calculate instance nums?
+d1024_nb100000_nq10000_nlist100000_k1_m8_bits8_u0: 27502 instances

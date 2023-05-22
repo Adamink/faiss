@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
     po::notify(vm);
 
-    std::cout << "d" << d << "_nb" << nb << "_nq" << nq << "_nlist" << nlist << "_k" << k << "_m" << 
+    std::cout << "d" << d << "_nb" << nb << "_nq" << nq << "_nlist" << nlist "_nprobe" << nprobe << "_k" << k << "_m" << 
      m << "_bits" << bitsPerCode << "_u" << usePrecomputedTables << std::endl;
 
     std::mt19937 rng;
@@ -72,11 +72,10 @@ int main(int argc, char** argv) {
     faiss::gpu::StandardGpuResources res;
 
     faiss::gpu::GpuIndexIVFPQConfig config;
-    config.usePrecomputedTables = true; // default = false
+    config.usePrecomputedTables = usePrecomputedTables; // default = false
 
     faiss::gpu::GpuIndexFlatL2 quantizer(&res, d); 
     faiss::gpu::GpuIndexIVFPQ index(&res, &quantizer, d, nlist, m, bitsPerCode, faiss::METRIC_L2, config);
-    std::cout << index.getPrecomputedCodes() << std::endl;
 
     index.train(nb, xb);
     index.add(nb, xb);
