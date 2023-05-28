@@ -14,6 +14,7 @@
 // #include <faiss/IndexIVFPQ.h>
 #include <faiss/gpu/GpuIndexFlat.h>
 #include <faiss/gpu/GpuIndexIVFPQ.h>
+#include <faiss/gpu/GpuIndexIVFFlat.h>
 #include <faiss/gpu/StandardGpuResources.h>
 
 using idx_t = faiss::idx_t;
@@ -47,8 +48,7 @@ int main(int argc, char** argv) {
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
     po::notify(vm);
-
-    std::cout << "IVFPQ-GPU" << std::endl;
+    std::cout << "IVFFlat-GPU" << std::endl;
     std::cout << "d" << d << "_nb" << nb << "_nq" << nq << "_nlist" << nlist << "_nprobe" << nprobe << "_k" << k << "_m" << 
      m << "_bits" << bitsPerCode << "_u" << usePrecomputedTables << std::endl;
 
@@ -72,15 +72,15 @@ int main(int argc, char** argv) {
 
     faiss::gpu::StandardGpuResources res;
 
-    faiss::gpu::GpuIndexIVFPQConfig config;
-    config.usePrecomputedTables = usePrecomputedTables; // default = false
+    faiss::gpu::GpuIndexIVFFlatConfig config;
 
     faiss::gpu::GpuIndexFlatL2 quantizer(&res, d); 
-    faiss::gpu::GpuIndexIVFPQ index(&res, &quantizer, d, nlist, m, bitsPerCode, faiss::METRIC_L2, config);
+    faiss::gpu::GpuIndexIVFFlat index(&res, &quantizer, d, nlist, faiss::METRIC_L2, config);
 
     index.train(nb, xb);
     index.add(nb, xb);
 
+    std::cout << "*************************" << std::endl;
     { // search xq
         idx_t* I = new idx_t[k * nq];
         float* D = new float[k * nq];

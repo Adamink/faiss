@@ -26,3 +26,6 @@ target_link_libraries(5-Multiple-GPUs PRIVATE faiss)
 
 add_executable(IVFPQ-GPU EXCLUDE_FROM_ALL IVFPQ-GPU.cpp)
 target_link_libraries(IVFPQ-GPU PRIVATE faiss Boost::program_options)
+
+add_executable(IVFFlat-GPU EXCLUDE_FROM_ALL IVFFlat-GPU.cpp)
+target_link_libraries(IVFFlat-GPU PRIVATE faiss Boost::program_options)

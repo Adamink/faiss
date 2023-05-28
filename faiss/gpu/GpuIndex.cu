@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
-#include <cstdio>
 
 namespace faiss {
 namespace gpu {
@@ -309,13 +308,12 @@ void GpuIndex::searchFromCpuPaged_(
     auto pinnedAlloc = resources_->getPinnedMemory();
     idx_t pageSizeInVecs =
             ((pinnedAlloc.second / 2) / (sizeof(float) * this->d));
-    printf("from cpu_paged, pin: %d", pageSizeInVecs);
 
     if (!pinnedAlloc.first || pageSizeInVecs < 1) {
         // Just page without overlapping copy with compute
         idx_t batchSize = utils::nextHighestPowerOf2(
                 (kNonPinnedPageSize / (sizeof(float) * this->d)));
-        printf("from cpu_paged, nonpin: %d, %d", batchSize, kNonPinnedPageSize);
+
         for (idx_t cur = 0; cur < n; cur += batchSize) {
             auto num = std::min(batchSize, n - cur);
 

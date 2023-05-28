@@ -16,7 +16,7 @@ In c_cpp_properties.json
 ```
 
 ```
-sudo nsys profile --stats=true --trace=cuda ./IVFPQ-GPU
+sudo nsys profile --stats=true --trace=cuda --gpu-metrics-device=0 	--cuda-memory-usage=true --cuda-graph-trace=graph ./IVFPQ-GPU
 ```
 
 ```txt
@@ -95,19 +95,35 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
   // Currently, we don't handle the case where the output data won't fit on the GPU
   GpuIndex::searchFromCpuPaged_ or searchNonPaged_ // batch-processing queries by using pinned memories
   // batchSize = nextHighestPowerOf2((kNonPinnedPageSize / (sizeof(float) * this->d)))
+  // only if dataSize >= minPagedSize_(268435456)
     GpuIndexIVF::searchImpl_ // set nprobe, calls baseIndex_::search(inited in GpuIndexIVFPQ)
       IVFPQ::search
         IVFBase::searchCoarseQuantizer_ // Performs search in a CPU or GPU coarse quantizer for IVF cells, calls coarseQuantizer::search
-          GpuIndex::search
+        // always: residuals, gpu, but not centroids
+          GpuIndex::search // ??? might recursive here
             GpuIndexFlat::searchImpl_ // called from GpuIndex::search, calls data_->query
               FlatIndex::query
                 bfKnnOnDevice
                   runL2Distance
                     runDistance
-                      runL2Norm
-                      runMatrixMult
+                      runL2Norm // ||c||^2(might be precomputed), ||q||^2
+                        l2NormRowMajor(kernel)
+                      chooseTileSize // Distance.cu, both number of queries and number of centroids being at least 512
+                      //For <= 8 GB GPUs, prefer 768 MB of usage
+                      // preferredTileRows = 512(batch_size)
+                      // tileCols = std::min(targetUsage / preferredTileRows, numCentroids);
+                      runMatrixMult // (query id x dim) x (centroid id, dim)' = (query id, centroid id)
+                        rawGemm
+                          cublasGemmEx(cublas api)
+                            volta_sgemm_128x64_tn(kernel)
                       runL2SelectMin
+                      // For L2 distance, we use this fused kernel that performs both
+                      // adding ||c||^2 to -2qc and k-selection, so we only need two
+                      // passes (one write by the gemm, one read here) over the huge
+                      // region of output memory
                         l2selectMin1(kernel)
+                      runSumAlongRows // outDistance
+                        sumAlongRows(kernel)
         IVFPQ::searchImpl_
           IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication to calculate - 2 * (x|y_R)
             runTransposeAny
@@ -115,7 +131,7 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
               transposeAny(kernel)
             runBatchMatrixMult
               rawBatchGemm
-                cublasGemmStridedBatchedEx(kernel) // cublas kernel
+                cublasGemmStridedBatchedEx(cublas api) // cublas kernel
             IVFPQ::runPQScanMultiPassPrecomputed 
               runMultiPassTile // same as below
           IVFPQ::runPQNoPrecomputedCodes_
@@ -138,20 +154,53 @@ grace hopper: CPU-GPU NVLink bandwidth 900GB/s
 
 [Faiss之IVF详解](https://blog.csdn.net/lijinwen920523/article/details/113819843)
 [Faiss专栏](https://blog.csdn.net/rangfei/category_10080429.html)
-questions
-IVF的聚类和PQ的聚类是不是一个？应该不是，PQ是对subvectors聚类，IVF直接对原向量聚类
-PQ.train 
-
-What is precomputed codes? different from precompute table
-  计算码本 ProductQuantizer::compute_distance_table
-  config.usePrecomputedTables ?
-  Compute precomputed code term 3, - 2 * (x|y_R)
 
 
-add时候就计算了PQCodes
+Questions:
+What is precomputed codes? What is precomputed table?
+  如果设置了usePrecomputedTables_，GpuIndexIVFPQ::setPrecomputedCodes会被调用
+  IndexIVFPQ.cpp设置并描述了Precomputed tables, 指的是下面的term2
 
-Note
-索引的训练不是越多越好，在faiss的源代码中已经默认设置了一个quantizer容纳的最多向量是256个，所以训练集最大为nlist *256，大于该值则会从训练集中随机取子集。
+  ```cpp
+  /** Precomputed tables for residuals
+   *
+   * During IVFPQ search with by_residual, we compute
+   *
+   *     d = || x - y_C - y_R ||^2
+   *
+   * where x is the query vector, y_C the coarse centroid, y_R the
+   * refined PQ centroid. The expression can be decomposed as:
+   *
+   *    d = || x - y_C ||^2 + || y_R ||^2 + 2 * (y_C|y_R) - 2 * (x|y_R)
+   *        ---------------   ---------------------------       -------
+   *             term 1                 term 2                   term 3
+   *
+   * When using multiprobe, we use the following decomposition:
+   * - term 1 is the distance to the coarse centroid, that is computed
+   *   during the 1st stage search.
+   * - term 2 can be precomputed, as it does not involve x. However,
+   *   because of the PQ, it needs nlist * M * ksub storage. This is why
+   *   use_precomputed_table is off by default
+   * - term 3 is the classical non-residual distance table.
+   *
+   * Since y_R defined by a product quantizer, it is split across
+   * subvectors and stored separately for each subvector. If the coarse
+   * quantizer is a MultiIndexQuantizer then the table can be stored
+   * more compactly.
+   *
+   * At search time, the tables for term 2 and term 3 are added up. This
+   * is faster when the length of the lists is > ksub * M.
+   */
+  ```
+train和add做了什么? 什么时候precompute的table（不重要）
+```cpp
+  IVFBase::addVectors // Classify and encode/add vectors to our IVF lists.
+  GpuIndexIVFPQ::train // Trains the coarse quantizer based on the given vector data
+```
 
-How to calculate instance nums?
-d1024_nb100000_nq10000_nlist100000_k1_m8_bits8_u0: 27502 instances
+考证：
+索引的训练不是越多越好，在faiss的源代码中已经默认设置了一个quantizer容纳的最多向量是256个，所以训练集最大为nlist *256，大于该值则会从训练集中随机取子集。待考证
+IVFBase::maxListLength_? seems not
+sgemm是在哪里被调用的
+  cublasGemmEx
+为什么l2selectmin只计算||c||^2 to -2qc？不计算||q||^2
