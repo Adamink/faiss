@@ -20,6 +20,9 @@
 
 #include <algorithm>
 #include <limits>
+#include <cstdio>
+#include <ctime>
+#include <iostream>
 
 namespace faiss {
 namespace gpu {
@@ -330,11 +333,14 @@ void runMultiPassTile(
         Tensor<float, 2, true>& outDistances,
         Tensor<idx_t, 2, true>& outIndices,
         cudaStream_t stream) {
+    auto time0 = clock();
     // Calculate offset lengths, so we know where to write out
     // intermediate results
     runCalcListOffsets(
             res, ivfListIds, listLengths, prefixSumOffsets, thrustMem, stream);
+    std::cout << "  calcoffsets:" << double(clock() - time0) / CLOCKS_PER_SEC * 1000. << std::endl;
 
+    auto startTime = clock();
     // The vector interleaved layout implementation
     if (interleavedCodeLayout) {
         auto kThreadsPerBlock = 256;
@@ -502,6 +508,8 @@ void runMultiPassTile(
 #undef RUN_INTERLEAVED
     }
 
+    std::cout << "  pqscan:" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl;
+    auto midTime = clock();
     // k-select the output in chunks, to increase parallelism
     runPass1SelectLists(
             prefixSumOffsets,
@@ -513,7 +521,8 @@ void runMultiPassTile(
             heapDistances,
             heapIndices,
             stream);
-
+    std::cout << "  pass1:" << double(clock() - midTime) / CLOCKS_PER_SEC * 1000. << std::endl;
+    auto lastTime = clock();
     // k-select final output
     auto flatHeapDistances = heapDistances.downcastInner<2>();
     auto flatHeapIndices = heapIndices.downcastInner<2>();
@@ -531,7 +540,7 @@ void runMultiPassTile(
             outDistances,
             outIndices,
             stream);
-
+    std::cout << "  pass2:" << double(clock() - lastTime) / CLOCKS_PER_SEC * 1000. << std::endl;
     CUDA_TEST_ERROR();
 }
 
@@ -673,6 +682,7 @@ void runPQScanMultiPassPrecomputed(
     streamWait(streams, {stream});
 
     int curStream = 0;
+    std::cout << "tileSize:" << queryTileSize << std::endl;
 
     for (idx_t query = 0; query < queries.getSize(0); query += queryTileSize) {
         idx_t numQueriesInTile =
@@ -697,7 +707,7 @@ void runPQScanMultiPassPrecomputed(
                 outDistances.narrowOutermost(query, numQueriesInTile);
         auto outIndicesView =
                 outIndices.narrowOutermost(query, numQueriesInTile);
-
+        auto startTime = clock();
         runMultiPassTile(
                 res,
                 queryView,
@@ -724,7 +734,7 @@ void runPQScanMultiPassPrecomputed(
                 outDistanceView,
                 outIndicesView,
                 streams[curStream]);
-
+        std::cout << "tile " << query << ":" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl << std::endl;
         curStream = (curStream + 1) % 2;
     }
 

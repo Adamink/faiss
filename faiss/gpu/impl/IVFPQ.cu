@@ -30,6 +30,8 @@
 #include <limits>
 #include <type_traits>
 #include <unordered_map>
+#include <ctime>
+#include <iostream>
 
 namespace faiss {
 namespace gpu {
@@ -514,6 +516,7 @@ void IVFPQ::search(
             makeTempAlloc(AllocType::Other, stream),
             {queries.getSize(0), nprobe});
 
+    auto startTime = clock();
     searchCoarseQuantizer_(
             coarseQuantizer,
             nprobe,
@@ -522,6 +525,8 @@ void IVFPQ::search(
             coarseIndices,
             nullptr /* don't need IVF centroid residuals */,
             nullptr /* don't need IVF centroids */);
+    auto midTime = clock();
+    std::cout << "searchCoarseQuantizer:" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl;
 
     searchImpl_(
             queries,
@@ -531,6 +536,8 @@ void IVFPQ::search(
             outDistances,
             outIndices,
             false);
+    std::cout << "searchImpl_:" << double(clock() - midTime) / CLOCKS_PER_SEC * 1000. << std::endl << std::endl;
+
 }
 
 void IVFPQ::searchPreassigned(
@@ -625,6 +632,7 @@ void IVFPQ::runPQPrecomputedCodes_(
 
     auto stream = resources_->getDefaultStreamCurrentDevice();
 
+    auto startTime = clock();
     // Compute precomputed code term 3, - 2 * (x|y_R)
     // This is done via batch MM
     // {sub q} x {(query id)(sub dim) * (code id)(sub dim)'} =>
@@ -664,7 +672,8 @@ void IVFPQ::runPQPrecomputedCodes_(
 
         runTransposeAny(term3, 0, 1, term3Transposed, stream);
     }
-
+    std::cout << "PreComputeTable:" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl;
+    auto midTime = clock();
     NoTypeTensor<3, true> term2;
     NoTypeTensor<3, true> term3;
     DeviceTensor<half, 3, true> term3Half;
@@ -700,6 +709,8 @@ void IVFPQ::runPQPrecomputedCodes_(
             outDistances,
             outIndices,
             resources_);
+    std::cout << "runPQScanMultiPassPrecomputed:" << double(clock() - midTime) / CLOCKS_PER_SEC * 1000. << std::endl;
+
 }
 
 void IVFPQ::runPQNoPrecomputedCodes_(

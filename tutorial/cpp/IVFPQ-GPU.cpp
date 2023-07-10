@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <random>
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
     int nprobe = 10; // number of lists to search for IVF indexing
     int k = 100;     // k nearest neighbors to be found
     int m = 8;       // number of subquantizers
-    int bitsPerCode = 8; 
+    int bitsPerCode = 8; // ksub = 2^bitsPerCode, determines number of centroids for each subquantizer
     bool usePrecomputedTables = false;
     namespace po = boost::program_options;
     po::options_description desc("Allowed options");
@@ -40,7 +41,7 @@ int main(int argc, char** argv) {
     ("k", po::value<int>(&k)->default_value(100),  "k nearest neighbors to be found")
     ("m", po::value<int>(&m)->default_value(8), "number of subquantizers")
     ("bits", po::value<int>(&bitsPerCode)->default_value(8), "")
-    ("usePrecomputedTables, u", po::value<bool>(&usePrecomputedTables)->default_value(false), "")
+    ("usePrecomputedTables,u", po::value<bool>(&usePrecomputedTables)->default_value(false), "")
   ;
 
     // Parse command line arguments
@@ -81,13 +82,15 @@ int main(int argc, char** argv) {
     index.train(nb, xb);
     index.add(nb, xb);
 
+    std::cout << "********training and adding finished*******" << std::endl;
     { // search xq
         idx_t* I = new idx_t[k * nq];
         float* D = new float[k * nq];
 
         index.nprobe = nprobe;
+        auto startTime = clock();
         index.search(nq, xq, k, D, I);
-
+        std::cout << "TotalTime:" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl;
         delete[] I;
         delete[] D;
     }

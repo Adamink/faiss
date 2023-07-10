@@ -24,13 +24,15 @@ nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
 k: k nearest neighbors
-M, m, subQuantizers = 8 : number of subquantizers
+M, m, subQuantizers = 8 : number of subquantizers [1,2,3,4,8,12,16,20,24,28,32,40,48,56,64,96]
 nbits: number of bits per subvector index (per quantization index)
 dsub = d / M: dimensionality of each subvector
 ksub = 1 << nbits: number of centroids for each subquantizer
 nprobe: number of probes at query time (IVF)
 nlist = 100 : number of inverted lists, defined in IndexIVF.h
 bitsPerCode = 8
+
+interleavedLayout: false this is a feature under development, do not use!
 
 Train_hot_start,     ///< the centroids are already initialized
 Train_shared,        ///< share dictionary accross PQ segments
@@ -115,7 +117,9 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                       runMatrixMult // (query id x dim) x (centroid id, dim)' = (query id, centroid id)
                         rawGemm
                           cublasGemmEx(cublas api)
-                            volta_sgemm_128x64_tn(kernel)
+                            volta_sgemm_128x64_tn(kernel) // 
+                            volta_sgemm_128x32_tn(kernel) // whem dim = 100
+                            gemmk1_kernel(kernel) // when dim = 1
                       runL2SelectMin
                       // For L2 distance, we use this fused kernel that performs both
                       // adding ||c||^2 to -2qc and k-selection, so we only need two
@@ -125,7 +129,7 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                       runSumAlongRows // outDistance
                         sumAlongRows(kernel)
         IVFPQ::searchImpl_
-          IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication to calculate - 2 * (x|y_R)
+          IVFPQ::runPQPrecomputedCodes_ // Performs matrix multiplication to calculate term 3: - 2 * (x|y_R) (Construct Table)
             runTransposeAny
               transposeOuter(kernel)
               transposeAny(kernel)
@@ -134,13 +138,15 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                 cublasGemmStridedBatchedEx(cublas api) // cublas kernel
             IVFPQ::runPQScanMultiPassPrecomputed 
               runMultiPassTile // same as below
+                pqScanPrecomputedMultiPass(kernel)
+                runPass1SelectLists(kernel)
+                runPass2SelectLists(kernel)
           IVFPQ::runPQNoPrecomputedCodes_
             runPQScanMultiPassNoPrecomputed
               runMultiPassTile
                 runCalcListOffsets // Calculate offset lengths, so we know where to write out intermediate results
                 runPQCodeDistances // Calculate residual code distances, since this is without precomputed codes
                   pqCodeDistances(kernel)
-                pqScanInterleaved(kernel)
                 pqScanNoPrecomputedMultiPass(kernel)
                 runPass1SelectLists(kernel) // k-select the output in chunks, to increase parallelism
                 runPass2SelectLists(kernel) // select final results
@@ -197,6 +203,8 @@ train和add做了什么? 什么时候precompute的table（不重要）
   IVFBase::addVectors // Classify and encode/add vectors to our IVF lists.
   GpuIndexIVFPQ::train // Trains the coarse quantizer based on the given vector data
 ```
+
+[理解CUDA中的thread,block,grid和warp](https://zhuanlan.zhihu.com/p/123170285)
 
 考证：
 索引的训练不是越多越好，在faiss的源代码中已经默认设置了一个quantizer容纳的最多向量是256个，所以训练集最大为nlist *256，大于该值则会从训练集中随机取子集。待考证

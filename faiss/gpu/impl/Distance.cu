@@ -126,7 +126,7 @@ void runDistance(
         Tensor<float, 1, true>* centroidNorms,
         Tensor<T, 2, true>& queries,
         bool queriesRowMajor,
-        int k,
+        int k, // = nprobe
         Tensor<float, 2, true>& outDistances,
         Tensor<idx_t, 2, true>& outIndices,
         bool ignoreOutDistances) {
@@ -197,6 +197,7 @@ void runDistance(
             tileRows,
             tileCols);
 
+    // std::cout << "(" << tileRows << "," << tileCols << ")" << std::endl; 
     idx_t numColTiles = utils::divUp(numCentroids, tileCols);
 
     // We can have any number of vectors to query against, even less than k, in

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <iostream>
 
 namespace faiss {
 namespace gpu {
@@ -416,7 +417,7 @@ void GpuIndex::searchFromCpuPaged_(
         if (cur3 != idx_t(-1) && cur3 < n) {
             // Process on GPU
             auto numToProcess = std::min(pageSizeInVecs, n - cur3);
-
+            std::cout << "PageSize:" << numToProcess << std::endl;
             // Make sure the previous copy has completed before continuing
             auto& eventPrev = eventPinnedCopyDone[cur3BufIndex];
             FAISS_ASSERT(eventPrev.get());
