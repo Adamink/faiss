@@ -338,7 +338,7 @@ void runMultiPassTile(
     // intermediate results
     runCalcListOffsets(
             res, ivfListIds, listLengths, prefixSumOffsets, thrustMem, stream);
-    std::cout << "  calcoffsets:" << double(clock() - time0) / CLOCKS_PER_SEC * 1000. << std::endl;
+    // std::cout << "  calcoffsets:" << double(clock() - time0) / CLOCKS_PER_SEC * 1000. << std::endl;
 
     auto startTime = clock();
     // The vector interleaved layout implementation
@@ -508,9 +508,12 @@ void runMultiPassTile(
 #undef RUN_INTERLEAVED
     }
 
-    std::cout << "  pqscan:" << double(clock() - startTime) / CLOCKS_PER_SEC * 1000. << std::endl;
     auto midTime = clock();
     // k-select the output in chunks, to increase parallelism
+    // heapDistances: (tileNum, 8, k)
+    std::cout << "  prefixSumOffsets " << prefixSumOffsets.getSize(0) << " " << prefixSumOffsets.getSize(1) << std::endl;
+    std::cout << "  allDistances " << allDistances.getSize(0) << std::endl;
+    std::cout << "  ivfListIds " << ivfListIds.getSize(0) << " " << ivfListIds.getSize(1) << std::endl;
     runPass1SelectLists(
             prefixSumOffsets,
             allDistances,
@@ -521,7 +524,7 @@ void runMultiPassTile(
             heapDistances,
             heapIndices,
             stream);
-    std::cout << "  pass1:" << double(clock() - midTime) / CLOCKS_PER_SEC * 1000. << std::endl;
+    // std::cout << "  heapDistancesSize " << heapDistances.getSize(0) << " " << heapDistances.getSize(1) << " " << heapDistances.getSize(2) << std::endl;
     auto lastTime = clock();
     // k-select final output
     auto flatHeapDistances = heapDistances.downcastInner<2>();
@@ -540,7 +543,6 @@ void runMultiPassTile(
             outDistances,
             outIndices,
             stream);
-    std::cout << "  pass2:" << double(clock() - lastTime) / CLOCKS_PER_SEC * 1000. << std::endl;
     CUDA_TEST_ERROR();
 }
 
@@ -707,6 +709,7 @@ void runPQScanMultiPassPrecomputed(
                 outDistances.narrowOutermost(query, numQueriesInTile);
         auto outIndicesView =
                 outIndices.narrowOutermost(query, numQueriesInTile);
+        std::cout << "tile " << query << std::endl;
         auto startTime = clock();
         runMultiPassTile(
                 res,

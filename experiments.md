@@ -25,8 +25,8 @@ sudo nsys profile --stats=true --trace=cuda ./IVFPQ-GPU --nq 1000000 --nlist 100
 => bandwidth = 200K / 2e5ns = 1GB/s 
 
 Questions:
-    kernel之间的overlap? 
-    用了多少SM?
+    kernel之间的overlap => nsys file
+    用了多少SM => 2
     grid_size 512x8
 
     dim = 1, k = 100
@@ -54,7 +54,7 @@ report11 - 1_select
 ![](my/k_select_SMs.png)
 Questions:
     - nprobe较大时，kernel bandwidth并未显著下降
-    - 似乎是2个SM，2个kernel并行？
+    - 似乎是2个SM，2个kernel并行
     - Data copy overhead?
 
 ![](my/modeling_scan.png)
@@ -63,5 +63,17 @@ Questions:
 k=1, nb = 1
 ### PQ-scan
 
-8 * 1e6 * 3e5 * 1byte / 1s = 24e11 byte/s = 2400 GB / s
+Key params: subQuantizers, nb, bits(usually 8bit, fixed)
+per_table_mem: nb * subQuantizers * 1Byte(8bit) = 8MB
+all: per_table_mem * nq = 8TB
+scan_time: 60s
+mem_bandwidth =  all / scan_time = 133 GB/s
+2个SM并行, 相当于scan_time减半，actual bandwidth = 266GB/s
+memory bandwidth occupancy: 266 / 313 = 85%
+
 ### k-select
+Key params: k, f(2-pass subdivision factor), (nlist, maxListLength => num of elements to select from)
+
+  what():  Error in void faiss::gpu::GpuIndexIVFPQ::verifyPQSettings_() const at /home/xiao/codes/faiss/faiss/gpu/GpuIndexIVFPQ.cu:430: Error: 'requiredSmemSize <= getMaxSharedMemPerBlock(config_.device)' failed: Device 0 has 49152 bytes of shared memory, while 8 bits per code and 64 sub-quantizers requires 65536 bytes. Consider useFloat16LookupTables and/or reduce parameters
+
+

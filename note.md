@@ -4,7 +4,7 @@ if(FAISS_ENABLE_GPU)
 endif()
 ```
 ```sh
-cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda"
+cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda" # used when openblaslib is installed into /usr/lib/
 cmake -B build . -DCMAKE_CUDA_ARCHITECTURES="75" -DCUDAToolkit_ROOT="/usr/local/cuda" -DBLAS_LIBRARIES="/mnt/scratch/xiaowu/OpenBLASLib/lib" -DLAPACK_LIBRARIES="/home/xiaowu/.local/liblapack.a/"
 sudo apt-get install -y libboost-program-options-dev
 ```
@@ -24,11 +24,11 @@ nb, n: database size
 nq: number of queries
 d: dimensionality of the input vectors
 k: k nearest neighbors
-M, m, subQuantizers = 8 : number of subquantizers [1,2,3,4,8,12,16,20,24,28,32,40,48,56,64,96]
+M, m, subQuantizers = 8 : number of subquantizers [1,2,3,4,8,12,16,20,24,28,32,40,48,56,64,96] (float16 for >=56)
 nbits: number of bits per subvector index (per quantization index)
 dsub = d / M: dimensionality of each subvector
 ksub = 1 << nbits: number of centroids for each subquantizer
-nprobe: number of probes at query time (IVF)
+nprobe: number of probes at query time (IVF), must <= 2048
 nlist = 100 : number of inverted lists, defined in IndexIVF.h
 bitsPerCode = 8
 
