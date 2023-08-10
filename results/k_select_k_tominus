@@ -1,0 +1,27 @@
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k1_m1
+searchCoarse:0.287, precomputetable:0.062, runpq:18.560, searchImpl:18.987
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k10_m1
+searchCoarse:0.299, precomputetable:0.063, runpq:19.358, searchImpl:19.788
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k20_m1
+searchCoarse:0.290, precomputetable:0.070, runpq:18.426, searchImpl:18.855
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k50_m1
+searchCoarse:0.285, precomputetable:0.065, runpq:18.691, searchImpl:19.109
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k100_m1
+searchCoarse:0.286, precomputetable:0.070, runpq:18.849, searchImpl:19.281
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k200_m1
+searchCoarse:0.283, precomputetable:0.070, runpq:22.363, searchImpl:22.788
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k500_m1
+searchCoarse:0.299, precomputetable:0.060, runpq:19.517, searchImpl:19.954
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k1000_m1
+searchCoarse:0.292, precomputetable:0.064, runpq:21.087, searchImpl:21.523
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k2000_m1
+searchCoarse:0.291, precomputetable:0.067, runpq:18.759, searchImpl:19.198

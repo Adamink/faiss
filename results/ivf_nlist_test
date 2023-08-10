@@ -1,0 +1,3 @@
+**********
+d1024_nq10000_nb1000000_nlist100000_nprobe1_k1_m16
+searchCoarse:0.387, precomputetable:0.043, runpq:409.566, searchImpl:410.080

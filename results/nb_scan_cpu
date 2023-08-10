@@ -1,0 +1,30 @@
+**********
+d1024_nq10000_nb100000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:122.724, precomputetable:0.000, runpq:38424.900, searchImpl:122.724
+**********
+d1024_nq10000_nb200000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:106.535, precomputetable:0.000, runpq:68970.800, searchImpl:106.535
+**********
+d1024_nq10000_nb300000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:108.704, precomputetable:0.000, runpq:99135.000, searchImpl:108.704
+**********
+d1024_nq10000_nb400000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:138.441, precomputetable:0.000, runpq:128992.000, searchImpl:138.441
+**********
+d1024_nq10000_nb500000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:98.260, precomputetable:0.000, runpq:156508.000, searchImpl:98.260
+**********
+d1024_nq10000_nb600000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:80.927, precomputetable:0.000, runpq:189464.000, searchImpl:80.927
+**********
+d1024_nq10000_nb700000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:207.573, precomputetable:0.000, runpq:222544.000, searchImpl:207.573
+**********
+d1024_nq10000_nb800000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:141.416, precomputetable:0.000, runpq:251018.000, searchImpl:141.416
+**********
+d1024_nq10000_nb900000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:132.635, precomputetable:0.000, runpq:277045.000, searchImpl:132.635
+**********
+d1024_nq10000_nb1000000_nlist1_nprobe1_k1_m8_cpu
+searchCoarse:91.614, precomputetable:0.000, runpq:312966.000, searchImpl:91.614
