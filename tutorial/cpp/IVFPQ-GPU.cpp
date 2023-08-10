@@ -17,7 +17,46 @@
 #include <faiss/gpu/GpuIndexIVFPQ.h>
 #include <faiss/gpu/StandardGpuResources.h>
 
+#include <cassert>
+#include <sys/stat.h>
+
 using idx_t = faiss::idx_t;
+
+
+float* fvecs_read(const char* fname, size_t* d_out, size_t* n_out) {
+    FILE* f = fopen(fname, "r");
+    if (!f) {
+        fprintf(stderr, "could not open %s\n", fname);
+        perror("");
+        abort();
+    }
+    int d;
+    fread(&d, 1, sizeof(int), f);
+    assert((d > 0 && d < 1000000) || !"unreasonable dimension");
+    fseek(f, 0, SEEK_SET);
+    struct stat st;
+    fstat(fileno(f), &st);
+    size_t sz = st.st_size;
+    assert(sz % ((d + 1) * 4) == 0 || !"weird file size");
+    size_t n = sz / ((d + 1) * 4);
+
+    *d_out = d;
+    *n_out = n;
+    float* x = new float[n * (d + 1)];
+    size_t nr = fread(x, sizeof(float), n * (d + 1), f);
+    assert(nr == n * (d + 1) || !"could not read whole file");
+
+    // shift array to remove row headers
+    for (size_t i = 0; i < n; i++)
+        memmove(x + i * d, x + 1 + i * (d + 1), d * sizeof(*x));
+
+    fclose(f);
+    return x;
+}
+
+int* ivecs_read(const char* fname, size_t* d_out, size_t* n_out) {
+    return (int*)fvecs_read(fname, d_out, n_out);
+}
 
 int main(int argc, char** argv) {
     int d = 1024;    // dimension
@@ -29,6 +68,7 @@ int main(int argc, char** argv) {
     int m = 8;       // number of subquantizers
     int bitsPerCode = 8; // ksub = 2^bitsPerCode, determines number of centroids for each subquantizer
     bool usePrecomputedTables = false;
+    bool sift = false;
     namespace po = boost::program_options;
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -42,6 +82,7 @@ int main(int argc, char** argv) {
     ("m", po::value<int>(&m)->default_value(8), "number of subquantizers")
     ("bits", po::value<int>(&bitsPerCode)->default_value(8), "")
     ("usePrecomputedTables,u", po::value<bool>(&usePrecomputedTables)->default_value(false), "")
+    ("sift", po::value<bool>(&sift)->default_value(false),"")
   ;
 
     // Parse command line arguments
@@ -53,22 +94,40 @@ int main(int argc, char** argv) {
     std::cout << "d" << d << "_nb" << nb << "_nq" << nq << "_nlist" << nlist << "_nprobe" << nprobe << "_k" << k << "_m" << 
      m << "_bits" << bitsPerCode << "_u" << usePrecomputedTables << std::endl;
 
+
+
+    float* xb;
+    float* xq;
+
     std::mt19937 rng;
     std::uniform_real_distribution<> distrib;
 
-    float* xb = new float[d * nb];
-    float* xq = new float[d * nq];
+    if(!sift){
+        xb = new float[d * nb];
+        xq = new float[d * nq];
 
-    for (int i = 0; i < nb; i++) {
-        for (int j = 0; j < d; j++)
-            xb[d * i + j] = distrib(rng);
-        xb[d * i] += i / 1000.;
+        for (int i = 0; i < nb; i++) {
+            for (int j = 0; j < d; j++)
+                xb[d * i + j] = distrib(rng);
+            xb[d * i] += i / 1000.;
+        }
+
+        for (int i = 0; i < nq; i++) {
+            for (int j = 0; j < d; j++)
+                xq[d * i + j] = distrib(rng);
+            xq[d * i] += i / 1000.;
+        }
     }
-
-    for (int i = 0; i < nq; i++) {
-        for (int j = 0; j < d; j++)
-            xq[d * i + j] = distrib(rng);
-        xq[d * i] += i / 1000.;
+    else{
+        size_t d1, d2, nout, nqout;
+        xb = fvecs_read("/home/xiao/codes/sift/sift_base.fvecs", &d1, &nout);
+        xq = fvecs_read("/home/xiao/codes/sift/sift_query.fvecs", &d2, &nqout);
+        // dim = 128, nq = 1000000
+        // std::cout << d1 << " " << nout << " " << d2 << " " << nqout << std::endl;
+        assert(d1 == d2 || !"query does not have same dimension as train set");
+        assert(d == d1);
+        assert(nout == nb);
+        assert(nqout == nq);
     }
 
     faiss::gpu::StandardGpuResources res;

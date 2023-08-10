@@ -339,7 +339,7 @@ void runMultiPassTile(
     runCalcListOffsets(
             res, ivfListIds, listLengths, prefixSumOffsets, thrustMem, stream);
     // std::cout << "  calcoffsets:" << double(clock() - time0) / CLOCKS_PER_SEC * 1000. << std::endl;
-
+    // total size: sum of the listLengths[ivfListIds[queryId][listId]]
     auto startTime = clock();
     // The vector interleaved layout implementation
     if (interleavedCodeLayout) {
@@ -510,7 +510,8 @@ void runMultiPassTile(
 
     auto midTime = clock();
     // k-select the output in chunks, to increase parallelism
-    // heapDistances: (tileNum, 8, k)
+    // heapDistances: (tileNum, 8, k) (f = 8)
+    // when nlist = nprobe = 1 => select from nb
     std::cout << "  prefixSumOffsets " << prefixSumOffsets.getSize(0) << " " << prefixSumOffsets.getSize(1) << std::endl;
     std::cout << "  allDistances " << allDistances.getSize(0) << std::endl;
     std::cout << "  ivfListIds " << ivfListIds.getSize(0) << " " << ivfListIds.getSize(1) << std::endl;

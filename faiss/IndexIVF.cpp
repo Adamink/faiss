@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <limits>
 #include <memory>
+#include <iostream>
 
 #include <faiss/utils/hamming.h>
 #include <faiss/utils/utils.h>
@@ -379,6 +380,9 @@ void IndexIVF::search(
         // all)
         sub_search_func(n, x, distances, labels, &indexIVF_stats);
     }
+    std::cout << "searchCoarseQuantizer:" << indexIVF_stats.quantization_time << std::endl;
+    std::cout << "runPQScanMultiPassPrecomputed:" << 
+    indexIVF_stats.search_time - indexIVF_stats.quantization_time << std::endl;
 }
 
 void IndexIVF::search_preassigned(

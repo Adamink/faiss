@@ -125,7 +125,8 @@ GpuIndexIVFPQ::search = GpuIndex::search // make sure searchImpl_ called with de
                       // adding ||c||^2 to -2qc and k-selection, so we only need two
                       // passes (one write by the gemm, one read here) over the huge
                       // region of output memory
-                        l2selectMin1(kernel)
+                        l2SelectMinK(kernel)
+                          BlockSelect(device)
                       runSumAlongRows // outDistance
                         sumAlongRows(kernel)
         IVFPQ::searchImpl_

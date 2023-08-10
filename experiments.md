@@ -9,6 +9,17 @@ Memory Size 5.77GB
 Core Clock 1.68GHz
 ```
 
+```txt
+CPU AMD Ryzen 5 3500 6-Core Processor
+CPU MHz:                         2200.000
+CPU max MHz:                     3600.0000
+CPU min MHz:                     2200.0000
+L1d cache:                       192 KiB
+L1i cache:                       192 KiB
+L2 cache:                        3 MiB
+L3 cache:                        16 MiB
+Virtualization:                  AMD-V
+```
 ## Modeling
 batch_size
 ### IVF
@@ -66,14 +77,33 @@ k=1, nb = 1
 Key params: subQuantizers, nb, bits(usually 8bit, fixed)
 per_table_mem: nb * subQuantizers * 1Byte(8bit) = 8MB
 all: per_table_mem * nq = 8TB
-scan_time: 60s
+scan_time: 60s 
 mem_bandwidth =  all / scan_time = 133 GB/s
-2个SM并行, 相当于scan_time减半，actual bandwidth = 266GB/s
-memory bandwidth occupancy: 266 / 313 = 85%
+
+解决方式：代码内注释掉k-select，看总的时间 // could work
 
 ### k-select
 Key params: k, f(2-pass subdivision factor), (nlist, maxListLength => num of elements to select from)
+如何得到select的大小：IVF list设置成1
 
-  what():  Error in void faiss::gpu::GpuIndexIVFPQ::verifyPQSettings_() const at /home/xiao/codes/faiss/faiss/gpu/GpuIndexIVFPQ.cu:430: Error: 'requiredSmemSize <= getMaxSharedMemPerBlock(config_.device)' failed: Device 0 has 49152 bytes of shared memory, while 8 bits per code and 64 sub-quantizers requires 65536 bytes. Consider useFloat16LookupTables and/or reduce parameters
+k = 128, tileSize = 8, average kernel time = 5.05ms
+memory bandwidth = 8e6 * 4Bytes(float32) / 5ms = 6.4GB/s
+element bandwidth = 8e6 / 5e-3 = 1.6e9 / s = almost same as CPU
 
+CPU: 4 * 1e6 / 9e-3 = 0.44 GB/s
 
+### Figures to generate
+ - Percentage of time on PQ-scan / K-select / (construct table / IVF indexing) with different parameters
+    - maybe different datasets, or just SIFT1M
+    - https://arxiv.org/pdf/2306.11182.pdf
+ - PQ-scan:
+    - compare CPU and GPU scan bandwidth
+    - different subquantizers
+    - percentage of time?
+ - k-select:
+    - compare CPU and GPU select speed
+    - with grace hopper, theoretical CPU speed
+    - with grace hopper, theoretical GPU speed
+    - CPU-GPU co-processing model
+        - different strategy, parameter
+        - with threshold?
